@@ -2,7 +2,6 @@ package meetup
 
 import slick.driver.PostgresDriver.api._
 import scala.concurrent._
-//import ExecutionContext.Implicits.global._
 
 case class BankAccount(accountNum: Int, balance: Int, active: Boolean)
 
@@ -29,9 +28,10 @@ class BankAccountDAO extends ConfigDatabaseProvider {
   def insert(bankAccount: BankAccount): Future[Int] =
     db.run(bankAccounts += bankAccount)
 
-  def update(accountNum: Int, bankAccount: BankAccount): Future[Int] =
-    db.run(filterQuery(accountNum).update(bankAccount))
+  def update(bankAccount: BankAccount): Future[Int] = db.run(filterQuery(bankAccount.accountNum).update(bankAccount))
 
-  def delete(accountNum: Int): Future[Int] =
-    db.run(filterQuery(accountNum).delete)
+  def withdraw(bankAccount: BankAccount, amount: Int): Future[Int] =
+    //db.run(filterQuery(bankAccount.accountNum).update(bankAccount.copy(balance = bankAccount.balance - amount)))
+    db.run(bankAccounts.filter(acct => acct.accountNum === bankAccount.accountNum && (acct.balance - amount) >= 0 && acct.active).update(bankAccount.copy(balance = bankAccount.balance - amount)))
+    //db.run(bankAccounts.filter(acct => acct.accountNum === bankAccount.accountNum && (acct.balance - amount) >= 0).update(bankAccount.copy(balance = bankAccount.balance - amount)))
 }

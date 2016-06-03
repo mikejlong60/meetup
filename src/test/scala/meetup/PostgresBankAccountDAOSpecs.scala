@@ -10,9 +10,7 @@ trait BankAccountDAOSpecs
   extends WordSpecLike
   with PropertyChecks
   with Matchers
-  with CancelAfterFailure
   with ScalaFutures {
-
 
   override implicit val patienceConfig = PatienceConfig(3.seconds)
 
@@ -46,69 +44,36 @@ trait BankAccountDAOSpecs
       }
     }
 
-    //    "insert" should {
-    //      "insert the bank account as given" in propertyTest { videoFeed =>
-    //        val x = for {
-    //          newId <- repo.nextPublicId
-    //          existingVF <- repo.find(videoFeed.publicId)
-    //          insertedVF <- repo.create(existingVF.get.copy(publicId = newId))
-    //          queriedVF <- repo.find(newId)
-    //        } yield (insertedVF.right.get, queriedVF.get)
-    //
-    //        val (insertedVF, queriedVF) = x.futureValue
-    //
-    //        insertedVF should equal(queriedVF)
-    //      }
-    //    }
+    "withdraw" should {
 
-    //    "update" should {
-    //      "update the video feed as given" in propertyTest { videoFeed =>
-    //        def switchDisabledBy(currentFlags: Flags) = currentFlags.disabledBy match {
-    //          case Some(FEED_DISABLER.VMC4) => currentFlags.copy(disabledBy = Some(FEED_DISABLER.ADMIN))
-    //          case Some(FEED_DISABLER.ADMIN) => currentFlags.copy(disabledBy = None)
-    //          case None => currentFlags.copy(disabledBy = Some(FEED_DISABLER.ADMIN))
-    //        }
-    //        val x = for {
-    //          existingVF <- repo.find(videoFeed.publicId)
-    //          updatedVF <- repo.update(existingVF.get.copy(name = "test", flags = switchDisabledBy(existingVF.get.flags)))
-    //          queriedVF <- repo.find(videoFeed.publicId)
-    //        } yield (updatedVF.get, queriedVF.get)
-    //
-    //        val (updatedVF, queriedVF) = x.futureValue
-    //
-    //        updatedVF should equal(queriedVF)
-    //      }
-    //    }
-    //
-    //    "delete" should {
-    //      "remove the video feed" in propertyTest { videoFeed =>
-    //        val x = for {
-    //          newId <- repo.nextPublicId
-    //          existingVF <- repo.find(videoFeed.publicId)
-    //          insertedVF <- repo.create(existingVF.get.copy(publicId = newId))
-    //          _ <- repo.delete(newId)
-    //          deletedVF <- repo.find(newId)
-    //        } yield deletedVF
-    //
-    //        val deletedVF = x.futureValue
-    //
-    //        deletedVF should not be 'defined
-    //      }
-    //
-    //      "return true on successful remove of the video feed" in propertyTest { videoFeed =>
-    //
-    //        val x = for {
-    //          newId <- repo.nextPublicId
-    //          existingVF <- repo.find(videoFeed.publicId)
-    //          insertedVF <- repo.create(existingVF.get.copy(publicId = newId))
-    //          result <- repo.delete(newId)
-    //        } yield result
-    //        val delResult = x.futureValue
-    //
-    //        assert(delResult)
-    //      }
-    //    }
+      import scala.concurrent.ExecutionContext.Implicits.global
 
+      "allow you to withdraw if you have enough money in the account" in propertyTest { bankAccount =>
+        val withdrawal = for {
+          _ <- dao.update(bankAccount.copy(active = true))
+          account <- dao.find(bankAccount.accountNum)
+          good <- dao.withdraw(bankAccount, account.get.balance - 1)
+        } yield good
+        withdrawal.futureValue should equal(1)
+      }
+
+      "not allow you to withdraw more than your balance" in propertyTest { bankAccount =>
+        val attemptedOverdraft = for {
+          _ <- dao.update(bankAccount.copy(active = true))
+          account <- dao.find(bankAccount.accountNum)
+          overdraft <- dao.withdraw(bankAccount, account.get.balance + 1)
+        } yield overdraft
+        attemptedOverdraft.futureValue should equal(0)
+      }
+
+      "not allow you to withdraw from a closed account" in propertyTest { bankAccount =>
+        val attemptedClosed = for {
+          newId <- dao.update(bankAccount.copy(active = false))
+          good <- dao.withdraw(bankAccount, bankAccount.balance - 1)
+        } yield good
+        attemptedClosed.futureValue should equal(0)
+      }
+    }
   }
 }
 
@@ -120,16 +85,16 @@ class PostgresBankAccountDAOSpecs
   def genBankAccount =
     for {
       accountNum <- Gen.choose(0, 1000000)
-      balance <- Gen.choose(0, 100000)
+      balance <- Gen.choose(0, 100)
       active <- Gen.oneOf(true, false)
     } yield BankAccount(accountNum = accountNum, balance = balance, active = active)
 
-  val feeds = Gen.listOfN(100, for {
-    videoFeed ← genBankAccount
-  } yield videoFeed).sample.get
+  val genedAccounts = Gen.listOfN(100, for {
+    bankAccount ← genBankAccount
+  } yield bankAccount).sample.get
 
   val bankAccounts = Table(
-    ("bankAccounts"), feeds: _*)
+    ("bankAccounts"), genedAccounts: _*)
 
   "A BankAccountDAO" should {
     behave like bankAccountDAOBehavior(dao, bankAccounts)
