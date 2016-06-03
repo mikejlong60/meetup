@@ -4,7 +4,6 @@ import org.scalacheck.Gen
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.prop.{ PropertyChecks, TableFor1 }
 import org.scalatest._
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 trait BankAccountDAOSpecs
@@ -12,12 +11,12 @@ trait BankAccountDAOSpecs
   with PropertyChecks
   with Matchers
   with CancelAfterFailure
-  with ScalaFutures
-  with OptionValues {
+  with ScalaFutures {
+
 
   override implicit val patienceConfig = PatienceConfig(3.seconds)
 
-  def bankAccountDAOBehavior(repo: BankAccountDAO, bankAccounts: TableFor1[BankAccount]) = {
+  def bankAccountDAOBehavior(dao: BankAccountDAO, bankAccounts: TableFor1[BankAccount]) = {
 
     def propertyTest(f: (BankAccount) => Unit): Unit = {
       forAll(bankAccounts) { (bankAccount: BankAccount) =>
@@ -28,21 +27,20 @@ trait BankAccountDAOSpecs
     "find" should {
 
       "return a bank account with the given account number when it exists." in propertyTest { bankAccount =>
-        whenReady(repo.insert(bankAccount)) { cr =>
-          repo.find(bankAccount.accountNum).futureValue should be('defined)
+        whenReady(dao.insert(bankAccount)) { cr =>
+          dao.find(bankAccount.accountNum).futureValue should be('defined)
         }
       }
 
       "return a video feed having the correct values." in propertyTest { bankAccount =>
-        val possibleBankAccount: Option[BankAccount] = repo.find(bankAccount.accountNum).futureValue
-
+        val possibleBankAccount: Option[BankAccount] = dao.find(bankAccount.accountNum).futureValue
         val foundAccount = possibleBankAccount.get
 
         foundAccount should equal(bankAccount)
       }
 
       "return None when the public Id does not exist." in forAll { (fakeAccountNum: Int) =>
-        val possibleBankAccount: Option[BankAccount] = repo.find(fakeAccountNum).futureValue
+        val possibleBankAccount: Option[BankAccount] = dao.find(fakeAccountNum).futureValue
 
         possibleBankAccount should not be 'defined
       }
@@ -117,10 +115,7 @@ trait BankAccountDAOSpecs
 class PostgresBankAccountDAOSpecs
   extends BankAccountDAOSpecs {
 
-  //    lazy val db = dbLifecycle.db
-  lazy val executionContext = ExecutionContext.global
-
-  val dao = new BankAccountDAO //(dbLifecycle.db.ioExecutionContext)
+  val dao = new BankAccountDAO
 
   def genBankAccount =
     for {
@@ -130,7 +125,7 @@ class PostgresBankAccountDAOSpecs
     } yield BankAccount(accountNum = accountNum, balance = balance, active = active)
 
   val feeds = Gen.listOfN(100, for {
-    videoFeed ← genBankAccount //feedsGen
+    videoFeed ← genBankAccount
   } yield videoFeed).sample.get
 
   val bankAccounts = Table(
