@@ -16,9 +16,9 @@ trait BankAccountDAOSpecs
 
   def bankAccountDAOBehavior(dao: BankAccountDAO, bankAccounts: TableFor1[BankAccount]) = {
 
-    def propertyTest(f: (BankAccount) => Unit): Unit = {
+    def propertyTest(testFunction: (BankAccount) => Unit): Unit = {
       forAll(bankAccounts) { (bankAccount: BankAccount) =>
-        f(bankAccount)
+        testFunction(bankAccount)
       }
     }
 
@@ -69,8 +69,8 @@ trait BankAccountDAOSpecs
       "not allow you to withdraw from a closed account" in propertyTest { bankAccount =>
         val attemptedClosed = for {
           newId <- dao.update(bankAccount.copy(active = false))
-          good <- dao.withdraw(bankAccount, bankAccount.balance - 1)
-        } yield good
+          closed <- dao.withdraw(bankAccount, bankAccount.balance - 1)
+        } yield closed
         attemptedClosed.futureValue should equal(0)
       }
     }
