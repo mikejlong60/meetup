@@ -1,8 +1,8 @@
-# Property-Based Testing with Scalacheck and Spark
+# Property-Based Testing with Scalacheck
 
 ## Abstract 
 
-Property-based testing is a powerful testing paradigm that is available in functional programming languages like Scala and Haskell.  Property-based testing offers a number of advantages over more traditional testing techniques, the main one being that test values are randomly generated and asserted repeatedly. More traditional unit testing tools like jUnit and its extensions(dbUnit, Cactus, JsonUnit ...) require that one explicitly create test data and explicitly assert the outcomes. In this presentation I will show how to do property-based testing using the Scalacheck library. I will show examples of property-based unit tests and property-based integration tests applied to Spark RDDs and more traditional RDBMs.
+Property-based testing is a powerful testing paradigm that is available in functional programming languages like Scala and Haskell.  Property-based testing offers a number of advantages over more traditional testing techniques, the main one being that test values are randomly generated and asserted repeatedly. More traditional unit testing tools like jUnit and its extensions(dbUnit, Cactus, JsonUnit ...) require that one explicitly create test data and explicitly assert the outcomes. In this presentation I will show how to do property-based testing using the Scalacheck library. I will show examples of property-based unit tests and property-based integration tests applied to the Postgres RDBMs.
 
 ## About the Presenter
 
